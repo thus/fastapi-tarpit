@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "fastapi"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-tarpit"
+version = "1.0.0"
+authors = [
+  { name="Mats Klepsland", email="mats.klepsland@gmail.com" },
+]
+description = "FastAPI middleware that purposely delays incoming connections on unused routes"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Framework :: FastAPI",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/thus/fastapi-tarpit"
+Issues = "https://github.com/thus/fastapi-tarpit/issues"
