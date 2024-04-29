@@ -8,6 +8,9 @@ version = "1.0.0"
 authors = [
   { name="Mats Klepsland", email="mats.klepsland@gmail.com" },
 ]
+dependencies = [
+  "fastapi",
+]
 description = "FastAPI middleware that purposely delays incoming connections on unused routes"
 readme = "README.md"
 requires-python = ">=3.8"
