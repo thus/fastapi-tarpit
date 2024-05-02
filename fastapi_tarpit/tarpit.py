@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from signal import SIGINT, getsignal, signal
 from types import FrameType
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
@@ -89,7 +89,8 @@ class TarpitClient:
 
 
 @contextmanager
-def tarpit_connection(request: Request, logger: logging.Logger):
+def tarpit_connection(request: Request,
+                      logger: logging.Logger) -> Iterator[TarpitClient]:
     client = TarpitClient(request, logger)
     try:
         yield client
