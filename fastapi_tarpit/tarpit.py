@@ -65,7 +65,7 @@ class TarpitClient:
     def close(self) -> None:
         duration = duration_pretty_string(datetime.now() - self._start_time)
         self._logger.info(f"Trapped '{self._host} in the tarpit for "
-                          f"{duration}")
+                          f"{duration} visiting '{self._request.url.path}'")
 
     def tick(self) -> None:
         """Used to log how long a host has been stuck in the tarpit at
@@ -75,7 +75,8 @@ class TarpitClient:
 
         duration = duration_pretty_string(datetime.now() - self._start_time)
         self._logger.info(f"'{self._host}' is still stuck in the tarpit "
-                          f"after {duration}")
+                          f"after {duration} visiting "
+                          f"'{self._request.url.path}'")
 
         self._log_interval_idx += 1
         try:
