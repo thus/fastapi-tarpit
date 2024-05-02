@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
@@ -13,5 +14,5 @@ app.add_middleware(HTTPTarpitMiddleware)
 
 # Tell web scrapers and robots to stay away!
 @app.get("/robots.txt", response_class=PlainTextResponse)
-def robots():
+def robots() -> Any:
     return """User-agent: *\nDisallow: /"""
