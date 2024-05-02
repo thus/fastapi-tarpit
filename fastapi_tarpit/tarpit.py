@@ -1,5 +1,6 @@
 import logging
 from asyncio import sleep
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from signal import SIGINT, getsignal, signal
 from types import FrameType
@@ -61,7 +62,7 @@ class TarpitClient:
         self._logger.info(f"'{self._host}' got stuck in the tarpit visiting "
                           f"'{request.url.path}'")
 
-    def __del__(self) -> None:
+    def close(self) -> None:
         duration = duration_pretty_string(datetime.now() - self._start_time)
         self._logger.info(f"Trapped '{self._host} in the tarpit for "
                           f"{duration}")
@@ -86,12 +87,22 @@ class TarpitClient:
         self._log_next = self._start_time + timedelta(seconds=seconds)
 
 
-async def tarpit_stream(client: TarpitClient,
+@contextmanager
+def tarpit_connection(request: Request, logger: logging.Logger):
+    client = TarpitClient(request, logger)
+    try:
+        yield client
+    finally:
+        client.close()
+
+
+async def tarpit_stream(request: Request, logger: logging.Logger,
                         interval: int) -> AsyncIterator[bytes]:
-    while tarpit_running:
-        await sleep(interval)
-        client.tick()
-        yield b"."
+    with tarpit_connection(request, logger) as client:
+        while tarpit_running:
+            await sleep(interval)
+            client.tick()
+            yield b"."
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):
@@ -129,7 +140,7 @@ class HTTPTarpitMiddleware(BaseHTTPMiddleware):
             self._get_routes(request.app)
 
         if request.url.path not in self._routes:
-            client = TarpitClient(request, self._logger)
-            return StreamingResponse(tarpit_stream(client, self._interval))
+            return StreamingResponse(tarpit_stream(request, self._logger,
+                                                   self._interval))
 
         return await call_next(request)
