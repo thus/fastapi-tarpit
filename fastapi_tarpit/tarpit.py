@@ -2,6 +2,7 @@ import logging
 from asyncio import sleep
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+from random import randrange
 from signal import SIGINT, getsignal, signal
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
@@ -48,13 +49,16 @@ def duration_pretty_string(duration: timedelta) -> str:
 
 
 class TarpitClient:
-    def __init__(self, request: Request, logger: logging.Logger):
+    def __init__(self, request: Request, logger: logging.Logger,
+                 output_length_min: int, output_length_max: int):
         if isinstance(request.client, Address):
             self._host = f"{request.client.host}:{request.client.port}"
         else:
             self._host = "<undefined>"
         self._request = request
         self._logger = logger
+        self._output_length_min = output_length_min
+        self._output_length_max = output_length_max
         self._start_time = datetime.now()
         self._log_next = self._start_time + timedelta(seconds=log_interval[0])
         self._log_interval_idx = 0
@@ -87,11 +91,17 @@ class TarpitClient:
             self._logging_enabled = False
         self._log_next = self._start_time + timedelta(seconds=seconds)
 
+    def generate_bytes(self) -> bytes:
+        length = randrange(self._output_length_min, self._output_length_max)
+        return b'.' * length
+
 
 @contextmanager
 def tarpit_connection(request: Request,
-                      logger: logging.Logger) -> Iterator[TarpitClient]:
-    client = TarpitClient(request, logger)
+                      logger: logging.Logger, output_length_min: int,
+                      output_length_max: int) -> Iterator[TarpitClient]:
+    client = TarpitClient(request, logger, output_length_min,
+                          output_length_max)
     try:
         yield client
     finally:
@@ -99,12 +109,14 @@ def tarpit_connection(request: Request,
 
 
 async def tarpit_stream(request: Request, logger: logging.Logger,
-                        interval: int) -> AsyncIterator[bytes]:
-    with tarpit_connection(request, logger) as client:
+                        interval: int, output_length_min: int,
+                        output_length_max: int) -> AsyncIterator[bytes]:
+    with tarpit_connection(request, logger, output_length_min,
+                           output_length_max) as client:
         while tarpit_running:
             await sleep(interval)
             client.tick()
-            yield b"."
+            yield client.generate_bytes()
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):
@@ -113,9 +125,13 @@ class HTTPTarpitMiddleware(BaseHTTPMiddleware):
             app: FastAPI,
             *,
             interval: int = 2,
+            output_length_min: int = 1,
+            output_length_max: int = 5,
             logger: Optional[logging.Logger] = None
     ):
         self._interval: int = interval
+        self._output_length_min: int = output_length_min
+        self._output_length_max: int = output_length_max
         self._logger = logger if logger else logging.getLogger(__name__)
         self._routes: Dict[str, int] = {}
 
@@ -143,6 +159,8 @@ class HTTPTarpitMiddleware(BaseHTTPMiddleware):
 
         if request.url.path not in self._routes:
             return StreamingResponse(tarpit_stream(request, self._logger,
-                                                   self._interval))
+                                                   self._interval,
+                                                   self._output_length_min,
+                                                   self._output_length_max))
 
         return await call_next(request)
