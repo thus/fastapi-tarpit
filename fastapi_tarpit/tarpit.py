@@ -129,7 +129,7 @@ async def tarpit_stream(request: Request,
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: FastAPI, **kwargs):
+    def __init__(self, app: FastAPI, **kwargs: Any):
         self.config: TarpitConfig = TarpitConfig(**kwargs)
         self.routes: Dict[str, int] = {}
 
