@@ -48,92 +48,90 @@ def duration_pretty_string(duration: timedelta) -> str:
     return " ".join(duration_str)
 
 
+class TarpitConfig():
+    def __init__(
+            self,
+            interval: int = 2,
+            output_length_min: int = 1,
+            output_length_max: int = 5,
+            logger: Optional[logging.Logger] = None
+    ):
+        self.interval: int = interval
+        self.output_length_min: int = output_length_min
+        self.output_length_max: int = output_length_max
+        self.logger = logger if logger else logging.getLogger(__name__)
+
+
 class TarpitClient:
-    def __init__(self, request: Request, logger: logging.Logger,
-                 output_length_min: int, output_length_max: int):
+    def __init__(self, request: Request, config: TarpitConfig):
         if isinstance(request.client, Address):
-            self._host = f"{request.client.host}:{request.client.port}"
+            self.host = f"{request.client.host}:{request.client.port}"
         else:
-            self._host = "<undefined>"
-        self._request = request
-        self._logger = logger
-        self._output_length_min = output_length_min
-        self._output_length_max = output_length_max
-        self._start_time = datetime.now()
-        self._log_next = self._start_time + timedelta(seconds=log_interval[0])
-        self._log_interval_idx = 0
-        self._logging_enabled = True
-        self._logger.info(f"'{self._host}' got stuck in the tarpit visiting "
-                          f"'{request.url.path}'")
+            self.host = "<undefined>"
+        self.request = request
+        self.config = config
+        self.start_time = datetime.now()
+        self.log_next = self.start_time + timedelta(seconds=log_interval[0])
+        self.log_interval_idx = 0
+        self.logging_enabled = True
+        self.config.logger.info(f"'{self.host}' got stuck in the tarpit "
+                                f"visiting '{request.url.path}'")
 
     def close(self) -> None:
-        duration = duration_pretty_string(datetime.now() - self._start_time)
-        self._logger.info(f"Trapped '{self._host} in the tarpit for "
-                          f"{duration} visiting '{self._request.url.path}'")
+        duration = duration_pretty_string(datetime.now() - self.start_time)
+        self.config.logger.info(f"Trapped '{self.host} in the tarpit for "
+                                f"{duration} visiting "
+                                f"'{self.request.url.path}'")
 
     def tick(self) -> None:
         """Used to log how long a host has been stuck in the tarpit at
            different time intervals (minute, hour, day, etc)."""
-        if not self._logging_enabled or datetime.now() < self._log_next:
+        if not self.logging_enabled or datetime.now() < self.log_next:
             return
 
-        duration = duration_pretty_string(datetime.now() - self._start_time)
-        self._logger.info(f"'{self._host}' is still stuck in the tarpit "
-                          f"after {duration} visiting "
-                          f"'{self._request.url.path}'")
+        duration = duration_pretty_string(datetime.now() - self.start_time)
+        self.config.logger.info(f"'{self.host}' is still stuck in the tarpit "
+                                f"after {duration} visiting "
+                                f"'{self.request.url.path}'")
 
-        self._log_interval_idx += 1
+        self.log_interval_idx += 1
         try:
-            seconds = log_interval[self._log_interval_idx]
+            seconds = log_interval[self.log_interval_idx]
         except IndexError:
             # This is unlikely to ever happen, but if it does, then just
             # disable logging.
-            self._logging_enabled = False
-        self._log_next = self._start_time + timedelta(seconds=seconds)
+            self.logging_enabled = False
+        self.log_next = self.start_time + timedelta(seconds=seconds)
 
     def generate_bytes(self) -> bytes:
-        length = randrange(self._output_length_min, self._output_length_max)
+        length = randrange(self.config.output_length_min,
+                           self.config.output_length_max)
         return b'.' * length
 
 
 @contextmanager
 def tarpit_connection(request: Request,
-                      logger: logging.Logger, output_length_min: int,
-                      output_length_max: int) -> Iterator[TarpitClient]:
-    client = TarpitClient(request, logger, output_length_min,
-                          output_length_max)
+                      config: TarpitConfig) -> Iterator[TarpitClient]:
+    client = TarpitClient(request, config)
     try:
         yield client
     finally:
         client.close()
 
 
-async def tarpit_stream(request: Request, logger: logging.Logger,
-                        interval: int, output_length_min: int,
-                        output_length_max: int) -> AsyncIterator[bytes]:
-    with tarpit_connection(request, logger, output_length_min,
-                           output_length_max) as client:
+async def tarpit_stream(request: Request,
+                        config: TarpitConfig) -> AsyncIterator[bytes]:
+    with tarpit_connection(request, config) as client:
         while tarpit_running:
-            await sleep(interval)
+            await sleep(config.interval)
             client.tick()
             yield client.generate_bytes()
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):
-    def __init__(
-            self,
-            app: FastAPI,
-            *,
-            interval: int = 2,
-            output_length_min: int = 1,
-            output_length_max: int = 5,
-            logger: Optional[logging.Logger] = None
-    ):
-        self._interval: int = interval
-        self._output_length_min: int = output_length_min
-        self._output_length_max: int = output_length_max
-        self._logger = logger if logger else logging.getLogger(__name__)
-        self._routes: Dict[str, int] = {}
+    def __init__(self, app: FastAPI, **kwargs):
+        self.config: TarpitConfig = TarpitConfig(**kwargs)
+        self.routes: Dict[str, int] = {}
 
         default_sigint_handler = getsignal(SIGINT)
 
@@ -148,19 +146,16 @@ class HTTPTarpitMiddleware(BaseHTTPMiddleware):
 
         super().__init__(app)
 
-    def _get_routes(self, app: FastAPI) -> None:
+    def get_routes(self, app: FastAPI) -> None:
         for route in app.routes:
-            self._routes[route.path] = 1  # type: ignore
+            self.routes[route.path] = 1  # type: ignore
 
     async def dispatch(self, request: Request,
                        call_next: RequestResponseEndpoint) -> Any:
-        if not self._routes:
-            self._get_routes(request.app)
+        if not self.routes:
+            self.get_routes(request.app)
 
-        if request.url.path not in self._routes:
-            return StreamingResponse(tarpit_stream(request, self._logger,
-                                                   self._interval,
-                                                   self._output_length_min,
-                                                   self._output_length_max))
+        if request.url.path not in self.routes:
+            return StreamingResponse(tarpit_stream(request, self.config))
 
         return await call_next(request)
