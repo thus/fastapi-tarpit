@@ -55,7 +55,7 @@ class TarpitConfig():
             output_length_min: int = 1,
             output_length_max: int = 5,
             logger: Optional[logging.Logger] = None
-    ):
+    ) -> None:
         self.interval: int = interval
         self.output_length_min: int = output_length_min
         self.output_length_max: int = output_length_max
@@ -63,7 +63,8 @@ class TarpitConfig():
 
 
 class TarpitClient:
-    def __init__(self: "TarpitClient", request: Request, config: TarpitConfig):
+    def __init__(self: "TarpitClient", request: Request,
+                 config: TarpitConfig) -> None:
         if isinstance(request.client, Address):
             self.host = f"{request.client.host}:{request.client.port}"
         else:
@@ -129,7 +130,8 @@ async def tarpit_stream(request: Request,
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):
-    def __init__(self: "HTTPTarpitMiddleware", app: FastAPI, **kwargs: Any):
+    def __init__(self: "HTTPTarpitMiddleware", app: FastAPI,
+                 **kwargs: Any) -> None:
         self.config: TarpitConfig = TarpitConfig(**kwargs)
         self.routes: Dict[str, int] = {}
 
