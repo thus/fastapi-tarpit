@@ -105,7 +105,7 @@ class TarpitClient:
         self.log_next = self.start_time + timedelta(seconds=seconds)
 
     def generate_bytes(self: "TarpitClient") -> bytes:
-        length = randrange(self.config.output_length_min,
+        length = randrange(self.config.output_length_min,  # noqa: S311
                            self.config.output_length_max)
         return b'.' * length
 
