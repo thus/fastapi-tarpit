@@ -50,7 +50,7 @@ def duration_pretty_string(duration: timedelta) -> str:
 
 class TarpitConfig():
     def __init__(
-            self,
+            self: "TarpitConfig",
             interval: int = 2,
             output_length_min: int = 1,
             output_length_max: int = 5,
@@ -63,7 +63,7 @@ class TarpitConfig():
 
 
 class TarpitClient:
-    def __init__(self, request: Request, config: TarpitConfig):
+    def __init__(self: "TarpitClient", request: Request, config: TarpitConfig):
         if isinstance(request.client, Address):
             self.host = f"{request.client.host}:{request.client.port}"
         else:
@@ -77,13 +77,13 @@ class TarpitClient:
         self.config.logger.info(f"'{self.host}' got stuck in the tarpit "
                                 f"visiting '{request.url.path}'")
 
-    def close(self) -> None:
+    def close(self: "TarpitClient") -> None:
         duration = duration_pretty_string(datetime.now() - self.start_time)
         self.config.logger.info(f"Trapped '{self.host} in the tarpit for "
                                 f"{duration} visiting "
                                 f"'{self.request.url.path}'")
 
-    def tick(self) -> None:
+    def tick(self: "TarpitClient") -> None:
         """Used to log how long a host has been stuck in the tarpit at
            different time intervals (minute, hour, day, etc)."""
         if not self.logging_enabled or datetime.now() < self.log_next:
@@ -103,7 +103,7 @@ class TarpitClient:
             self.logging_enabled = False
         self.log_next = self.start_time + timedelta(seconds=seconds)
 
-    def generate_bytes(self) -> bytes:
+    def generate_bytes(self: "TarpitClient") -> bytes:
         length = randrange(self.config.output_length_min,
                            self.config.output_length_max)
         return b'.' * length
@@ -129,7 +129,7 @@ async def tarpit_stream(request: Request,
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: FastAPI, **kwargs: Any):
+    def __init__(self: "HTTPTarpitMiddleware", app: FastAPI, **kwargs: Any):
         self.config: TarpitConfig = TarpitConfig(**kwargs)
         self.routes: Dict[str, int] = {}
 
@@ -146,11 +146,11 @@ class HTTPTarpitMiddleware(BaseHTTPMiddleware):
 
         super().__init__(app)
 
-    def get_routes(self, app: FastAPI) -> None:
+    def get_routes(self: "HTTPTarpitMiddleware", app: FastAPI) -> None:
         for route in app.routes:
             self.routes[route.path] = 1  # type: ignore
 
-    async def dispatch(self, request: Request,
+    async def dispatch(self: "HTTPTarpitMiddleware", request: Request,
                        call_next: RequestResponseEndpoint) -> Any:
         if not self.routes:
             self.get_routes(request.app)
