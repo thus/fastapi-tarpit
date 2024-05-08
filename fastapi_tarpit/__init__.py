@@ -1,4 +1,4 @@
-from .tarpit import HTTPTarpitMiddleware
+from .middleware import HTTPTarpitMiddleware
 
 __version__ = "1.0.0"
 
