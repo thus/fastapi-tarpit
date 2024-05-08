@@ -75,14 +75,16 @@ class TarpitClient:
         self.log_next = self.start_time + timedelta(seconds=log_interval[0])
         self.log_interval_idx = 0
         self.logging_enabled = True
-        self.config.logger.info(f"'{self.host}' got stuck in the tarpit "
-                                f"visiting '{request.url.path}'")
+        self.log(f"'{self.host}' got stuck in the tarpit visiting "
+                 f"'{request.url.path}'")
+
+    def log(self: "TarpitClient", msg: str) -> None:
+        self.config.logger.info(msg)
 
     def close(self: "TarpitClient") -> None:
         duration = duration_pretty_string(datetime.now() - self.start_time)
-        self.config.logger.info(f"Trapped '{self.host} in the tarpit for "
-                                f"{duration} visiting "
-                                f"'{self.request.url.path}'")
+        self.log(f"Trapped '{self.host} in the tarpit for {duration} "
+                 f"visiting '{self.request.url.path}'")
 
     def tick(self: "TarpitClient") -> None:
         """Used to log how long a host has been stuck in the tarpit at
@@ -91,9 +93,8 @@ class TarpitClient:
             return
 
         duration = duration_pretty_string(datetime.now() - self.start_time)
-        self.config.logger.info(f"'{self.host}' is still stuck in the tarpit "
-                                f"after {duration} visiting "
-                                f"'{self.request.url.path}'")
+        self.log(f"'{self.host}' is still stuck in the tarpit after "
+                 f"{duration} visiting '{self.request.url.path}'")
 
         self.log_interval_idx += 1
         try:
