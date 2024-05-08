@@ -9,8 +9,8 @@ from fastapi.responses import StreamingResponse
 from starlette.middleware.base import (BaseHTTPMiddleware,
                                        RequestResponseEndpoint)
 
-from .config import TarpitConfig
 from .client import TarpitClient
+from .config import TarpitConfig
 
 tarpit_running: bool = True
 
