@@ -1,4 +1,3 @@
-from asyncio import sleep
 from contextlib import contextmanager
 from signal import SIGINT, getsignal, signal
 from types import FrameType
@@ -29,7 +28,7 @@ async def tarpit_stream(request: Request,
                         config: TarpitConfig) -> AsyncIterator[bytes]:
     with tarpit_connection(request, config) as client:
         while tarpit_running:
-            await sleep(config.interval)
+            await client.wait()
             client.tick()
             yield client.generate_chunk()
 

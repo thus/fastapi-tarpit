@@ -1,3 +1,4 @@
+from asyncio import sleep
 from datetime import datetime, timedelta
 from random import randrange
 from typing import List
@@ -87,3 +88,8 @@ class TarpitClient:
         length = randrange(self.config.chunk_length_min,  # noqa: S311
                            self.config.chunk_length_max)
         return b'.' * length
+
+    async def wait(self: "TarpitClient") -> None:
+        wait = randrange(self.config.chunk_wait_min,  # noqa: S311
+                         self.config.chunk_wait_max)
+        await sleep(wait)
