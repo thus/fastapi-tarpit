@@ -31,7 +31,7 @@ async def tarpit_stream(request: Request,
         while tarpit_running:
             await sleep(config.interval)
             client.tick()
-            yield client.generate_bytes()
+            yield client.generate_chunk()
 
 
 class HTTPTarpitMiddleware(BaseHTTPMiddleware):

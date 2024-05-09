@@ -83,7 +83,7 @@ class TarpitClient:
             self.logging_enabled = False
         self.log_next = self.start_time + timedelta(seconds=seconds)
 
-    def generate_bytes(self: "TarpitClient") -> bytes:
-        length = randrange(self.config.output_length_min,  # noqa: S311
-                           self.config.output_length_max)
+    def generate_chunk(self: "TarpitClient") -> bytes:
+        length = randrange(self.config.chunk_length_min,  # noqa: S311
+                           self.config.chunk_length_max)
         return b'.' * length
