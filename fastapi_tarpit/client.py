@@ -1,5 +1,6 @@
 from asyncio import sleep
 from datetime import datetime, timedelta
+from enum import Enum
 from random import randrange
 from typing import List
 
@@ -41,6 +42,12 @@ def duration_pretty_string(duration: timedelta) -> str:
     return " ".join(duration_str)
 
 
+class TarpitState(Enum):
+    NEW = 1
+    TRAPPED = 2
+    CLOSED = 3
+
+
 class TarpitClient:
     def __init__(self: "TarpitClient", request: Request,
                  config: TarpitConfig) -> None:
@@ -54,16 +61,24 @@ class TarpitClient:
         self.log_next = self.start_time + timedelta(seconds=log_interval[0])
         self.log_interval_idx = 0
         self.logging_enabled = True
-        self.log(f"'{self.host}' got stuck in the tarpit visiting "
-                 f"'{request.url.path}'")
+        self.log(TarpitState.NEW)
 
-    def log(self: "TarpitClient", msg: str) -> None:
+    def log(self: "TarpitClient", state: TarpitState) -> None:
+        duration = duration_pretty_string(datetime.now() - self.start_time)
+        match state:
+            case TarpitState.NEW:
+                msg = (f"'{self.host}' got stuck in the tarpit visiting "
+                       f"'{self.request.url.path}")
+            case TarpitState.TRAPPED:
+                msg = (f"'{self.host}' is still stuck in the tarpit after "
+                       f"{duration} visiting '{self.request.url.path}'")
+            case TarpitState.CLOSED:
+                msg = (f"Trapped '{self.host} in the tarpit for {duration} "
+                       f"visiting '{self.request.url.path}'")
         self.config.logger.info(msg)
 
     def close(self: "TarpitClient") -> None:
-        duration = duration_pretty_string(datetime.now() - self.start_time)
-        self.log(f"Trapped '{self.host} in the tarpit for {duration} "
-                 f"visiting '{self.request.url.path}'")
+        self.log(TarpitState.CLOSED)
 
     def tick(self: "TarpitClient") -> None:
         """Used to log how long a host has been stuck in the tarpit at
@@ -71,9 +86,7 @@ class TarpitClient:
         if not self.logging_enabled or datetime.now() < self.log_next:
             return
 
-        duration = duration_pretty_string(datetime.now() - self.start_time)
-        self.log(f"'{self.host}' is still stuck in the tarpit after "
-                 f"{duration} visiting '{self.request.url.path}'")
+        self.log(TarpitState.TRAPPED)
 
         self.log_interval_idx += 1
         try:
