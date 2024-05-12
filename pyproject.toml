@@ -13,7 +13,7 @@ dependencies = [
 ]
 description = "FastAPI middleware that purposely delays incoming connections on unused routes"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Framework :: FastAPI",
