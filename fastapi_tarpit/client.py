@@ -1,3 +1,4 @@
+import json
 from asyncio import sleep
 from datetime import datetime, timedelta
 from enum import Enum
@@ -65,16 +66,37 @@ class TarpitClient:
 
     def log(self: "TarpitClient", state: TarpitState) -> None:
         duration = duration_pretty_string(datetime.now() - self.start_time)
+
+        if self.config.log_as_json:
+            data = {
+                "host": self.host,
+                "path": self.request.url.path,
+                "duration": duration
+            }
+
         match state:
             case TarpitState.NEW:
-                msg = (f"'{self.host}' got stuck in the tarpit visiting "
-                       f"'{self.request.url.path}")
+                if self.config.log_as_json:
+                    data["state"] = "NEW"
+                else:
+                    msg = (f"'{self.host}' got stuck in the tarpit visiting "
+                           f"'{self.request.url.path}")
             case TarpitState.TRAPPED:
-                msg = (f"'{self.host}' is still stuck in the tarpit after "
-                       f"{duration} visiting '{self.request.url.path}'")
+                if self.config.log_as_json:
+                    data["state"] = "TRAPPED"
+                else:
+                    msg = (f"'{self.host}' is still stuck in the tarpit after "
+                           f"{duration} visiting '{self.request.url.path}'")
             case TarpitState.CLOSED:
-                msg = (f"Trapped '{self.host} in the tarpit for {duration} "
-                       f"visiting '{self.request.url.path}'")
+                if self.config.log_as_json:
+                    data["state"] = "CLOSED"
+                else:
+                    msg = (f"Trapped '{self.host} in the tarpit for "
+                           f"{duration} visiting '{self.request.url.path}'")
+
+        if self.config.log_as_json:
+            msg = json.dumps(data)
+
         self.config.logger.info(msg)
 
     def close(self: "TarpitClient") -> None:

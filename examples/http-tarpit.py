@@ -9,7 +9,7 @@ from fastapi_tarpit import HTTPTarpitMiddleware
 logging.basicConfig(encoding='utf-8', level=logging.INFO)
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-app.add_middleware(HTTPTarpitMiddleware)
+app.add_middleware(HTTPTarpitMiddleware, log_as_json=True)
 
 
 # Tell web scrapers and robots to stay away!
