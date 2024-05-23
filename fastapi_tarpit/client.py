@@ -53,9 +53,9 @@ class TarpitClient:
     def __init__(self: "TarpitClient", request: Request,
                  config: TarpitConfig) -> None:
         if isinstance(request.client, Address):
-            self.host = f"{request.client.host}:{request.client.port}"
+            self.client = f"{request.client.host}:{request.client.port}"
         else:
-            self.host = "<undefined>"
+            self.client = "<undefined>"
         self.request = request
         self.config = config
         self.start_time = datetime.now()
@@ -69,7 +69,7 @@ class TarpitClient:
 
         if self.config.log_as_json:
             data = {
-                "host": self.host,
+                "client": self.client,
                 "path": self.request.url.path,
                 "duration": duration
             }
@@ -79,19 +79,20 @@ class TarpitClient:
                 if self.config.log_as_json:
                     data["state"] = "NEW"
                 else:
-                    msg = (f"'{self.host}' got stuck in the tarpit visiting "
-                           f"'{self.request.url.path}")
+                    msg = (f"'{self.client}' got stuck in the tarpit visiting "
+                           f"'{self.request.url.path}'")
             case TarpitState.TRAPPED:
                 if self.config.log_as_json:
                     data["state"] = "TRAPPED"
                 else:
-                    msg = (f"'{self.host}' is still stuck in the tarpit after "
-                           f"{duration} visiting '{self.request.url.path}'")
+                    msg = (f"'{self.client}' is still stuck in the tarpit "
+                           f"after {duration} visiting "
+                           f"'{self.request.url.path}'")
             case TarpitState.CLOSED:
                 if self.config.log_as_json:
                     data["state"] = "CLOSED"
                 else:
-                    msg = (f"Trapped '{self.host} in the tarpit for "
+                    msg = (f"Trapped '{self.client} in the tarpit for "
                            f"{duration} visiting '{self.request.url.path}'")
 
         if self.config.log_as_json:
@@ -103,7 +104,7 @@ class TarpitClient:
         self.log(TarpitState.CLOSED)
 
     def tick(self: "TarpitClient") -> None:
-        """Used to log how long a host has been stuck in the tarpit at
+        """Used to log how long a client has been stuck in the tarpit at
            different time intervals (minute, hour, day, etc)."""
         if not self.logging_enabled or datetime.now() < self.log_next:
             return
